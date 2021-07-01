@@ -3,6 +3,8 @@ import json
 import logging
 import websockets
 
+# Libary for Websocket IO
+
 logging.basicConfig()
 
 USERS = set()
@@ -15,7 +17,7 @@ FUNCTIONS = dict()
 # Jack = JackendServer(5011)
 # Jack.registerAction("test", testfunctionname)
 # Jack.start()
-class JackendServer:
+class Jackend:
     def __init__(self, port):
         self.port = port
 
@@ -34,6 +36,7 @@ class JackendServer:
 #     Request.setMessage("Moin")
 #     await Request.send()
 class JackendRequest:
+    # Init (private)
     def __init__(self, action, attributes, websocket):
         self.websocket = websocket
         self.action = action
@@ -41,56 +44,13 @@ class JackendRequest:
         self.status = True
         self.message = ""
         self.result = ""
-
-    def getAttribute(self, attribute):
-        if attribute in self.attributes:
-            return self.attributes[attribute]
-        else:
-            print("JACKEND ERROR: No attribute {} in Request.".format(attribute))
-            return ""
-
-    def setError(self, message):
-        self.status = False
-        self.message = message
-
-    def setMessage(self, message):
-        self.message = message
-
-    def setResult(self, result):
-        self.result = result
-
-    def getStatus(self):
-        return self.status
-
-    def getWsData(self):
-        wsdata = {"action" : self.action, \
-        "status" : self.status, \
-        "message" : self.message, \
-        "result" : self.result}
-        return wsdata
-
-    async def sendWithMessage(self, message):
-        self.status = True
-        self.setMessage(message)
-        await self.send()
-
-    async def sendWithError(self, message) :
-        self.status = False
-        self.setMessage(message)
-        await self.send()
-
-    async def send(self) :
-        wsdata = self.getWsData()
-        print("SEND: {}".format(wsdata))
-        await self.websocket.send(json.dumps(wsdata))
-
-    async def hasAttributeWithError(self, attribute, attributeType, NotNull):
-        errorObj = self.hasAttribute(attribute, attributeType, NotNull)
-        if errorObj["error"]:
-            await self.sendWithError(errorObj["errorMessage"])
-        return errorObj["error"]
-
-    def hasAttribute(self, attribute, attributeType, NotNull):
+    # check if request has the attribute <attribute>, if not then send answer
+    async def needAttributeOrSendError(self, attribute, attributeType, NotNull):
+        error, errorMessage = self.needAttribute(attribute, attributeType, NotNull)
+        if error:
+            await self.sendWithError(errorMessage)
+    # check if request has the attribute <attribute>
+    def needAttribute(self, attribute, attributeType, NotNull):
         err = False
         errMsg = ""
         if NotNull and attribute not in self.attributes:
@@ -111,8 +71,50 @@ class JackendRequest:
             elif attributeType != "STRING":
                 err = True
                 errMsg = "JACKEND ERROR: Can't check for Datatype {}. INT|STRING|DATE".format(attributeType)
-        return {"error" : err, "errorMessage" : errMsg} # Error
-        
+        return err, errMsg # Error
+    # get the value of the given key
+    def getAttribute(self, attribute):
+        if attribute in self.attributes:
+            return self.attributes[attribute]
+        else:
+            print("JACKEND ERROR: No attribute {} in Request.".format(attribute))
+            return ""
+    # set message to <message> and status to false
+    def setErrorMessage(self, message):
+        self.status = False
+        self.message = message
+    # set message to <message>
+    def setMessage(self, message):
+        self.message = message
+    # set result to <result>
+    def setResult(self, result):
+        self.result = result
+    # get status
+    def getStatus(self):
+        return self.status
+    # instantly send with <message> and status true
+    async def sendWithMessage(self, message):
+        self.status = True
+        self.setMessage(message)
+        await self.send()
+    # instantly send with <message> and status false
+    async def sendWithError(self, message) :
+        self.status = False
+        self.setMessage(message)
+        await self.send()
+    # send to websocket
+    async def send(self) :
+        wsdata = self._getWsData()
+        print("SEND: {}".format(wsdata))
+        await self.websocket.send(json.dumps(wsdata))
+    # build the request
+    def _getWsData(self):
+        wsdata = {"action" : self.action, \
+        "status" : self.status, \
+        "message" : self.message, \
+        "result" : self.result}
+        return wsdata
+
 #==========================================================
 # USE PYTHON3.6                
 #==========================================================
@@ -146,6 +148,10 @@ def _isJasonValid(json_string) :
     except ValueError:
         return False
     return True
+
+#==========================================================
+async def prepareNewRequest(action, websocket)  :   
+        return JackendRequest(action, "", websocket)
 
 #==========================================================
 async def _sendBadJson(json_string, websocket) :
