@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Websocket-Tester</title>
+</head>
+<body style="background-color: #777777;">
+	<center>
+		<h1>
+			<br>
+			Websocket: <input id="ws" type="text" size="100">
+			<br>
+			JSON: <input id="json" type="text" size="100" height="20">
+			<br>
+			<div id="status"></div>
+			<br>
+			<button type="button"
+			onclick="checkWS()">Send JSON to Websocket</button>
+			<button type="button"
+			onclick="createWS()">Restart Websocket</button>
+
+			<br><br>
+			<div id="main"></div>
+			<br>
+		</h1>
+	</center>
+<script>
+
+WSPORT = 5011
+WSURL = "ws://192.168.1.99"
+
+function createWS() {
+	// create websocket
+	WEBSOCKET = new WebSocket(WSURL+":"+WSPORT);
+	console.log("Websocket restarted..")
+	document.getElementById("status").innerHTML = "Websocket restarted"
+	document.getElementById("main").innerHTML = "";
+	onActions()
+}
+
+function checkWS(){
+	// send websocket-request
+	json = document.getElementById("json").value;
+	sendToWebsocket(WEBSOCKET, json);
+}
+
+async function sendToWebsocket(WEBSOCKET, data) {
+	if (WEBSOCKET.readyState != WebSocket.CLOSED) {
+		WEBSOCKET.send(data)
+	} else {
+		console.log("Can't send: Websocket offline.")
+		document.getElementById("status").innerHTML = "Can't send: Websocket offline."
+	}
+}
+
+WEBSOCKET = new WebSocket(WSURL+":"+WSPORT);
+console.log("Websocket started..")
+document.getElementById("status").innerHTML = "Websocket started"
+onActions()
+
+function onActions() {
+	WEBSOCKET.onclose = function (event) {
+		document.getElementById("status").innerHTML = "Websocket closed"
+		document.getElementById("main").innerHTML = event.data;
+	}
+
+	WEBSOCKET.onerror = function (event) {
+		document.getElementById("status").innerHTML = "Websocket error"
+		document.getElementById("main").innerHTML = event.data;
+	}
+
+	// get websocket-answer
+	WEBSOCKET.onmessage = function (event) {	
+		data = JSON.parse(event.data);
+		console.log("Receive: " + event.data)
+		document.getElementById("main").innerHTML = event.data
+	}
+}
+
+</script>
+
+</body>
+
+</html>
