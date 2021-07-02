@@ -6,13 +6,14 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Websocket-Tester</title>
 </head>
-<body style="background-color: #777777;">
+<body style="background-color: #777777; font-family: Arial, Helvetica, sans-serif;">
 	<center>
 		<h1>
 			<br>
-			Websocket: <input id="ws" type="text" size="100">
 			<br>
-			JSON: <input id="json" type="text" size="100" height="20">
+			JSON:
+			<br>
+			<input id="json" type="text" style="height: 250px; width: 90%" onkeyup="saveValue(this);">
 			<br>
 			<div id="status"></div>
 			<br>
@@ -20,16 +21,24 @@
 			onclick="checkWS()">Send JSON to Websocket</button>
 			<button type="button"
 			onclick="createWS()">Restart Websocket</button>
-
-			<br><br>
+			<br>
+			<br>
 			<div id="main"></div>
 			<br>
+			History:
+			<br>
+			<ul id="history"></ul>
 		</h1>
 	</center>
 <script>
 
 WSPORT = 5011
-WSURL = "ws://192.168.1.99"
+WSURL = "ws://v2202102117434144038.nicesrv.de"
+
+document.getElementById("json").value = getSavedValue("json");    // set the value to this input
+
+createWS()
+onActions()
 
 function createWS() {
 	// create websocket
@@ -47,6 +56,7 @@ function checkWS(){
 }
 
 async function sendToWebsocket(WEBSOCKET, data) {
+	addHistory()
 	if (WEBSOCKET.readyState != WebSocket.CLOSED) {
 		WEBSOCKET.send(data)
 	} else {
@@ -54,11 +64,6 @@ async function sendToWebsocket(WEBSOCKET, data) {
 		document.getElementById("status").innerHTML = "Can't send: Websocket offline."
 	}
 }
-
-WEBSOCKET = new WebSocket(WSURL+":"+WSPORT);
-console.log("Websocket started..")
-document.getElementById("status").innerHTML = "Websocket started"
-onActions()
 
 function onActions() {
 	WEBSOCKET.onclose = function (event) {
@@ -77,6 +82,32 @@ function onActions() {
 		console.log("Receive: " + event.data)
 		document.getElementById("main").innerHTML = event.data
 	}
+}
+
+
+//Save the value function - save it to localStorage as (ID, VALUE)
+function saveValue(e){
+	var id = e.id;  // get the sender's id to save it . 
+	var val = e.value; // get the value. 
+	localStorage.setItem(id, val);// Every time user writing something, the localStorage's value will override . 
+}
+
+//get the saved value function - return the value of "v" from localStorage. 
+function getSavedValue  (v){
+	if (!localStorage.getItem(v)) {
+		return '{"action":"addition", "number1":1, "number2":4}';// You can change this to your defualt value. 
+	}
+	return localStorage.getItem(v);
+}
+
+function addHistory(){
+    var ul = document.getElementById("history");
+    var candidate = document.getElementById("json");
+    var li = document.createElement("li");
+    li.setAttribute('id',candidate.value);
+    li.setAttribute('onclick','document.getElementById("json").value = \''+ candidate.value +'\'');
+    li.appendChild(document.createTextNode(candidate.value));
+    ul.appendChild(li);
 }
 
 </script>
